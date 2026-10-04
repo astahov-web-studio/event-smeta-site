@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Смета v0.2 — прототип v3</title>
+<title>Смета v0.3 — прототип v3</title>
 <style>
 :root{
   --bg:#fbf8f4;
@@ -869,7 +869,7 @@ h1{
 }
 
 
-/* v0.2 stronger visual hierarchy */
+/* v0.3 stronger visual hierarchy */
 .brand-line{
   display:flex;
   align-items:center;
@@ -1147,7 +1147,7 @@ h1{
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-line">Смета <span class="version-badge">v0.2</span></div>
+      <div class="brand-line">Смета <span class="version-badge">v0.3</span></div>
       <small>event workspace</small>
     </div>
     <nav class="nav">
@@ -1549,85 +1549,178 @@ function exportClientPDF(){
  const e=currentDraft;if(!e)return;
 
  const content=[];
- content.push({text:e.project||'Смета',fontSize:22,bold:true,color:'#2f2925',margin:[0,0,0,6]});
+
+ content.push({
+   text:e.project||'Смета',
+   fontSize:22,
+   bold:true,
+   color:'#2f2925',
+   margin:[0,0,0,5]
+ });
 
  const meta=[];
  if(e.client) meta.push(`Клиент: ${e.client}`);
  if(e.date) meta.push(`Дата: ${e.date.split('-').reverse().join('.')}`);
  if(e.venue) meta.push(`Площадка: ${e.venue}`);
- if(meta.length) content.push({text:meta.join('   •   '),fontSize:9,color:'#766a62',margin:[0,0,0,18]});
+
+ if(meta.length){
+   content.push({
+     text:meta.join('   •   '),
+     fontSize:9,
+     color:'#766a62',
+     margin:[0,0,0,16]
+   });
+ }
+
+ const body=[[
+   {text:'Раздел',bold:true,color:'#5f554f',fillColor:'#e9dccd'},
+   {text:'Позиция',bold:true,color:'#5f554f',fillColor:'#e9dccd'},
+   {text:'Цена',bold:true,color:'#5f554f',fillColor:'#e9dccd',alignment:'right'},
+   {text:'Кол-во',bold:true,color:'#5f554f',fillColor:'#e9dccd',alignment:'right'},
+   {text:'Стоимость',bold:true,color:'#5f554f',fillColor:'#e9dccd',alignment:'right'},
+   {text:'Примечание',bold:true,color:'#5f554f',fillColor:'#e9dccd'}
+ ]];
 
  e.sections.forEach((s,si)=>{
-   content.push({
-     text:s.title||'Раздел',
-     fontSize:13,bold:true,color:'#5f4b3f',
-     fillColor:'#f2e9df',
-     margin:[0,si===0?0:12,0,6]
-   });
+   const rows=(s.rows||[]);
+   const sectionTotal=rows.reduce((a,r)=>a+(Number(r.price)||0)*(Number(r.qty)||0),0);
 
-   const body=[
-     [
-       {text:'Позиция',bold:true,color:'#665b54'},
-       {text:'Цена',bold:true,color:'#665b54',alignment:'right'},
-       {text:'Кол-во',bold:true,color:'#665b54',alignment:'right'},
-       {text:'Стоимость',bold:true,color:'#665b54',alignment:'right'},
-       {text:'Примечание',bold:true,color:'#665b54'}
-     ]
-   ];
+   if(rows.length){
+     rows.forEach((r,ri)=>{
+       const row=[
+         ri===0
+           ? {
+               text:s.title||'Раздел',
+               rowSpan:rows.length,
+               bold:true,
+               color:'#54473f',
+               fillColor:'#f7f1ea',
+               alignment:'left',
+               margin:[0,4,0,4]
+             }
+           : {},
+         {text:r.name||'',margin:[0,3,0,3]},
+         {text:rub(Number(r.price)||0),alignment:'right',margin:[0,3,0,3]},
+         {text:String(Number(r.qty)||0),alignment:'right',margin:[0,3,0,3]},
+         {
+           text:rub((Number(r.price)||0)*(Number(r.qty)||0)),
+           alignment:'right',
+           bold:true,
+           margin:[0,3,0,3]
+         },
+         {text:r.note||'',color:'#6f6761',margin:[0,3,0,3]}
+       ];
+       body.push(row);
+     });
 
-   (s.rows||[]).forEach(r=>{
      body.push([
-       {text:r.name||'',margin:[0,3,0,3]},
-       {text:rub(Number(r.price)||0),alignment:'right',margin:[0,3,0,3]},
-       {text:String(Number(r.qty)||0),alignment:'right',margin:[0,3,0,3]},
-       {text:rub((Number(r.price)||0)*(Number(r.qty)||0)),alignment:'right',bold:true,margin:[0,3,0,3]},
-       {text:r.note||'',color:'#6f6761',margin:[0,3,0,3]}
+       {text:'',fillColor:'#fbf8f4'},
+       {
+         text:'Итого по разделу',
+         bold:true,
+         color:'#6a5b51',
+         fillColor:'#fbf8f4',
+         colSpan:3,
+         alignment:'right',
+         margin:[0,3,0,3]
+       },
+       {},
+       {},
+       {
+         text:rub(sectionTotal),
+         bold:true,
+         alignment:'right',
+         fillColor:'#fbf8f4',
+         margin:[0,3,0,3]
+       },
+       {text:'',fillColor:'#fbf8f4'}
      ]);
-   });
-
-   content.push({
-     table:{
-       headerRows:1,
-       widths:['*',62,42,72,'*'],
-       body
-     },
-     layout:{
-       fillColor:(row)=>row===0?'#faf6f1':null,
-       hLineColor:()=> '#e4ddd6',
-       vLineColor:()=> '#e4ddd6',
-       paddingLeft:()=>6,paddingRight:()=>6,paddingTop:()=>4,paddingBottom:()=>4
-     }
-   });
-
-   const sectionTotal=(s.rows||[]).reduce((a,r)=>a+(Number(r.price)||0)*(Number(r.qty)||0),0);
-   content.push({
-     columns:[
-       {text:''},
-       {text:`Итого по разделу: ${rub(sectionTotal)}`,bold:true,alignment:'right',width:'auto'}
-     ],
-     margin:[0,7,0,3]
-   });
+   }else{
+     body.push([
+       {
+         text:s.title||'Раздел',
+         bold:true,
+         color:'#54473f',
+         fillColor:'#f7f1ea'
+       },
+       {text:'—',color:'#9b918b'},
+       {text:'',alignment:'right'},
+       {text:'',alignment:'right'},
+       {text:rub(0),alignment:'right',bold:true},
+       {text:''}
+     ]);
+     body.push([
+       {text:'',fillColor:'#fbf8f4'},
+       {
+         text:'Итого по разделу',
+         bold:true,
+         color:'#6a5b51',
+         fillColor:'#fbf8f4',
+         colSpan:3,
+         alignment:'right'
+       },
+       {},
+       {},
+       {text:rub(0),bold:true,alignment:'right',fillColor:'#fbf8f4'},
+       {text:'',fillColor:'#fbf8f4'}
+     ]);
+   }
  });
 
+ body.push([
+   {
+     text:'ИТОГО',
+     bold:true,
+     color:'#3e332d',
+     fillColor:'#e9dccd',
+     colSpan:4,
+     alignment:'right',
+     margin:[0,5,0,5]
+   },
+   {},
+   {},
+   {},
+   {
+     text:rub(calcTotal(e)),
+     bold:true,
+     fontSize:11,
+     color:'#2f2925',
+     alignment:'right',
+     fillColor:'#e9dccd',
+     margin:[0,5,0,5]
+   },
+   {text:'',fillColor:'#e9dccd'}
+ ]);
+
  content.push({
-   columns:[
-     {text:''},
-     {
-       stack:[
-         {text:'ОБЩИЙ ИТОГ',fontSize:9,bold:true,color:'#766a62',alignment:'right'},
-         {text:rub(calcTotal(e)),fontSize:21,bold:true,color:'#3d312a',alignment:'right'}
-       ],
-       width:'auto'
-     }
-   ],
-   margin:[0,18,0,0]
+   table:{
+     headerRows:1,
+     widths:[76,'*',56,42,68,'*'],
+     body,
+     dontBreakRows:false
+   },
+   layout:{
+     hLineWidth:()=>0.65,
+     vLineWidth:()=>0.65,
+     hLineColor:()=> '#bfb4aa',
+     vLineColor:()=> '#bfb4aa',
+     paddingLeft:()=>5,
+     paddingRight:()=>5,
+     paddingTop:()=>3,
+     paddingBottom:()=>3
+   }
  });
 
  const doc={
    pageSize:'A4',
-   pageMargins:[32,34,32,38],
+   pageOrientation:'portrait',
+   pageMargins:[24,28,24,34],
    info:{title:e.project||'Смета'},
-   defaultStyle:{font:'Roboto',fontSize:9,color:'#2f2b28'},
+   defaultStyle:{
+     font:'Roboto',
+     fontSize:8.2,
+     color:'#2f2b28'
+   },
    footer:(page,current)=>({
      text:`${page} / ${current}`,
      alignment:'center',
@@ -1637,6 +1730,7 @@ function exportClientPDF(){
    }),
    content
  };
+
  pdfMake.createPdf(doc).download(safeFileName(e.project)+'.pdf');
 }
 
