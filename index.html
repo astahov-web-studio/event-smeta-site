@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Смета — прототип v3</title>
+<title>Смета v0.2 — прототип v3</title>
 <style>
 :root{
   --bg:#fbf8f4;
@@ -868,6 +868,208 @@ h1{
   }
 }
 
+
+/* v0.2 stronger visual hierarchy */
+.brand-line{
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.version-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:22px;
+  padding:3px 8px;
+  border-radius:999px;
+  border:1px solid rgba(236,218,202,.20);
+  background:rgba(255,255,255,.07);
+  color:#d9c7b7;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.4px;
+}
+
+.main{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 180px),
+    #f7f3ee;
+}
+
+/* top-level blocks are now visually distinct */
+#editor .form-card{
+  background:#ffffff;
+  border:1px solid #dfd2c6;
+  border-top:4px solid #b99375;
+  box-shadow:0 14px 38px rgba(56,42,32,.07);
+}
+#editor .workspace{
+  position:relative;
+}
+#editor .est-section{
+  background:#fff;
+  border:1px solid #ddd2c8;
+  border-top:4px solid #c9ab90;
+  box-shadow:0 10px 30px rgba(58,43,32,.055);
+}
+#editor .section-head{
+  background:#f2e7dc;
+  border-bottom:1px solid #dfd2c6;
+}
+#editor .section-title{
+  background:#fff;
+  border-color:#d8c8ba;
+}
+#editor .sheet-head{
+  background:#f7f3ef;
+  color:#6f625a;
+  border-bottom:1px solid #e3d9d1;
+}
+#editor .rows{
+  background:#fff;
+}
+#editor .estimate-row{
+  background:#fff;
+  border-bottom:1px solid #ece3dc;
+}
+#editor .section-foot{
+  background:#f8f4f0;
+  border-top:1px solid #e3d9d1;
+}
+#editor .add-section{
+  background:#efe5db;
+  border:1.5px dashed #c9aa90;
+  color:#6f5544;
+}
+#editor .add-section:hover{
+  background:#eadccf;
+}
+#editor .payments-panel{
+  background:#f7fbf8;
+  border:1px solid #cfddd2;
+  border-top:4px solid #839d89;
+}
+#editor .summary-panel{
+  background:#f8f6f3;
+  border:1px solid #ddd3ca;
+  border-top:4px solid #9e846f;
+}
+
+/* labels become compact section markers, not washed-out chips */
+.editor-block-label{
+  background:transparent!important;
+  color:#6f5d51!important;
+  padding:0;
+  border-radius:0;
+  margin:22px 0 10px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1.1px;
+  position:relative;
+}
+.editor-block-label::after{
+  content:"";
+  display:inline-block;
+  width:42px;
+  height:2px;
+  background:#c5a487;
+  border-radius:999px;
+  margin-left:10px;
+  vertical-align:middle;
+}
+
+/* summary strip gets clearer internal contrast */
+.summary{
+  background:#e3d8cf;
+}
+.summary>div:nth-child(1){
+  background:#fffaf5!important;
+}
+.summary>div:nth-child(2){
+  background:#f4faf6!important;
+}
+.summary>div:nth-child(3){
+  background:#f5f7fa!important;
+}
+.summary>div:nth-child(4){
+  background:#faf8f5!important;
+}
+.summary>div{
+  border-right:1px solid #e3d8cf;
+}
+.summary>div:last-child{
+  border-right:0;
+}
+
+/* input fields pop slightly more */
+.field input,.field select,.field textarea,
+.cell-input,.cell-text,.section-title{
+  background:#fff;
+  border-color:#d9cec5;
+}
+.calculated{
+  background:#f3eee9;
+  border-color:#ded2c8;
+}
+
+/* clearer action area */
+.toolbar .btn{
+  background:#fff;
+}
+.toolbar .btn.primary{
+  background:linear-gradient(180deg,#8a6f5c 0%,#765f4e 100%);
+}
+
+/* list page clearer cards */
+.estimates-table{
+  background:transparent;
+  box-shadow:none;
+  border:0;
+}
+.est-row{
+  background:#fff;
+}
+.est-row.header{
+  background:#ece4dd;
+  border:1px solid #ddd2c8;
+  border-radius:16px 16px 0 0;
+}
+.est-row:not(.header){
+  border-left:1px solid #e3d9d1;
+  border-right:1px solid #e3d9d1;
+}
+.est-row:last-child{
+  border-bottom:1px solid #e3d9d1;
+  border-radius:0 0 16px 16px;
+}
+
+/* finance cards are clearer, too */
+#finance .stat{
+  background:#fff;
+  border-top:3px solid #c9ad95;
+}
+#finance .panel{
+  background:#fff;
+}
+
+/* mobile: retain hierarchy without crowding */
+@media(max-width:760px){
+  .brand-line{gap:7px}
+  .version-badge{font-size:9px;padding:2px 7px;min-height:20px}
+  .main{background:#f7f3ee}
+  .editor-block-label{margin:18px 0 8px}
+  #editor .est-section{
+    border-top-width:3px;
+  }
+  #editor .section-head{
+    background:#f2e7dc;
+  }
+  .summary>div{
+    border-bottom:1px solid #e5dbd3;
+  }
+}
+
 @media(max-width:1120px){
  .stats{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr 1fr}
  .est-row{grid-template-columns:2fr 1fr 1fr 150px}.est-row>div:nth-child(4),.est-row>div:nth-child(5){display:none}
@@ -944,7 +1146,10 @@ h1{
 
 <div class="app">
   <aside class="sidebar">
-    <div class="brand">Смета<small>event workspace</small></div>
+    <div class="brand">
+      <div class="brand-line">Смета <span class="version-badge">v0.2</span></div>
+      <small>event workspace</small>
+    </div>
     <nav class="nav">
       <button class="active" data-page="estimates">Сметы</button>
       <button data-page="new">Новая смета</button>
