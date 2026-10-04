@@ -480,6 +480,9 @@ h1{
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -537,8 +540,8 @@ h1{
         <div><h1 id="editorTitle">Новая смета</h1><div class="sub" id="editorSubtitle">Заполните данные и нажмите «Сохранить смету».</div></div>
         <div class="toolbar">
           <button class="btn" id="backBtn">← Назад</button>
-          <button class="btn" id="printBtn">PDF / Печать</button>
-          <button class="btn" id="excelBtn">Excel CSV</button>
+          <button class="btn" id="printBtn">PDF</button>
+          <button class="btn" id="excelBtn">Excel</button>
           <button class="btn primary" id="saveBtn">Сохранить смету</button>
         </div>
       </div>
@@ -895,14 +898,165 @@ async function deleteEstimate(id){
 function openPayment(){document.getElementById('payAmount').value='';document.getElementById('payDate').value=today();document.getElementById('payComment').value='Предоплата';document.getElementById('paymentModal').classList.add('show')}
 function closePayment(){document.getElementById('paymentModal').classList.remove('show')}
 function confirmPayment(){const a=Number(document.getElementById('payAmount').value)||0;if(a<=0){alert('Введите сумму оплаты.');return}currentDraft.payments.unshift({id:uid(),amount:a,date:document.getElementById('payDate').value,comment:document.getElementById('payComment').value||'Оплата'});closePayment();renderPayments();renderTotals();renderEstimateSummary()}
-function exportCSV(){
- const e=currentDraft;if(!e)return;
- const rows=[['Смета',e.project],['Клиент',e.client],['Дата',e.date],['Площадка',e.venue],[],['Раздел','Позиция','Цена','Количество','Стоимость','Примечание']];
- e.sections.forEach(s=>{s.rows.forEach(r=>rows.push([s.title,r.name,r.price,r.qty,(+r.price||0)*(+r.qty||0),r.note]));rows.push([s.title,'ИТОГО ПО РАЗДЕЛУ','','',s.rows.reduce((a,r)=>a+(+r.price||0)*(+r.qty||0),0),''])});
- rows.push([],['ОБЩИЙ ИТОГ','','','',calcTotal(e),'']);
- const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\r\n');
- const b=new Blob([csv],{type:'text/csv;charset=utf-8;'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(e.project||'smeta')+'.csv';a.click();URL.revokeObjectURL(a.href)
+function safeFileName(name){
+ return String(name||'smeta').replace(/[\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim() || 'smeta';
 }
+
+function exportClientPDF(){
+ const e=currentDraft;if(!e)return;
+
+ const content=[];
+ content.push({text:e.project||'Смета',fontSize:22,bold:true,color:'#2f2925',margin:[0,0,0,6]});
+
+ const meta=[];
+ if(e.client) meta.push(`Клиент: ${e.client}`);
+ if(e.date) meta.push(`Дата: ${e.date.split('-').reverse().join('.')}`);
+ if(e.venue) meta.push(`Площадка: ${e.venue}`);
+ if(meta.length) content.push({text:meta.join('   •   '),fontSize:9,color:'#766a62',margin:[0,0,0,18]});
+
+ e.sections.forEach((s,si)=>{
+   content.push({
+     text:s.title||'Раздел',
+     fontSize:13,bold:true,color:'#5f4b3f',
+     fillColor:'#f2e9df',
+     margin:[0,si===0?0:12,0,6]
+   });
+
+   const body=[
+     [
+       {text:'Позиция',bold:true,color:'#665b54'},
+       {text:'Цена',bold:true,color:'#665b54',alignment:'right'},
+       {text:'Кол-во',bold:true,color:'#665b54',alignment:'right'},
+       {text:'Стоимость',bold:true,color:'#665b54',alignment:'right'},
+       {text:'Примечание',bold:true,color:'#665b54'}
+     ]
+   ];
+
+   (s.rows||[]).forEach(r=>{
+     body.push([
+       {text:r.name||'',margin:[0,3,0,3]},
+       {text:rub(Number(r.price)||0),alignment:'right',margin:[0,3,0,3]},
+       {text:String(Number(r.qty)||0),alignment:'right',margin:[0,3,0,3]},
+       {text:rub((Number(r.price)||0)*(Number(r.qty)||0)),alignment:'right',bold:true,margin:[0,3,0,3]},
+       {text:r.note||'',color:'#6f6761',margin:[0,3,0,3]}
+     ]);
+   });
+
+   content.push({
+     table:{
+       headerRows:1,
+       widths:['*',62,42,72,'*'],
+       body
+     },
+     layout:{
+       fillColor:(row)=>row===0?'#faf6f1':null,
+       hLineColor:()=> '#e4ddd6',
+       vLineColor:()=> '#e4ddd6',
+       paddingLeft:()=>6,paddingRight:()=>6,paddingTop:()=>4,paddingBottom:()=>4
+     }
+   });
+
+   const sectionTotal=(s.rows||[]).reduce((a,r)=>a+(Number(r.price)||0)*(Number(r.qty)||0),0);
+   content.push({
+     columns:[
+       {text:''},
+       {text:`Итого по разделу: ${rub(sectionTotal)}`,bold:true,alignment:'right',width:'auto'}
+     ],
+     margin:[0,7,0,3]
+   });
+ });
+
+ content.push({
+   columns:[
+     {text:''},
+     {
+       stack:[
+         {text:'ОБЩИЙ ИТОГ',fontSize:9,bold:true,color:'#766a62',alignment:'right'},
+         {text:rub(calcTotal(e)),fontSize:21,bold:true,color:'#3d312a',alignment:'right'}
+       ],
+       width:'auto'
+     }
+   ],
+   margin:[0,18,0,0]
+ });
+
+ const doc={
+   pageSize:'A4',
+   pageMargins:[32,34,32,38],
+   info:{title:e.project||'Смета'},
+   defaultStyle:{font:'Roboto',fontSize:9,color:'#2f2b28'},
+   footer:(page,current)=>({
+     text:`${page} / ${current}`,
+     alignment:'center',
+     color:'#aaa09a',
+     fontSize:8,
+     margin:[0,10,0,0]
+   }),
+   content
+ };
+ pdfMake.createPdf(doc).download(safeFileName(e.project)+'.pdf');
+}
+
+function exportXLSX(){
+ const e=currentDraft;if(!e)return;
+
+ const rows=[];
+ rows.push([e.project||'Смета']);
+ if(e.client) rows.push(['Клиент',e.client]);
+ if(e.date) rows.push(['Дата',e.date.split('-').reverse().join('.')]);
+ if(e.venue) rows.push(['Площадка',e.venue]);
+ rows.push([]);
+
+ const merges=[{s:{r:0,c:0},e:{r:0,c:5}}];
+
+ e.sections.forEach(s=>{
+   const titleRow=rows.length;
+   rows.push([s.title||'Раздел']);
+   merges.push({s:{r:titleRow,c:0},e:{r:titleRow,c:5}});
+   rows.push(['Позиция','Цена','Количество','Стоимость','Примечание','']);
+   (s.rows||[]).forEach(r=>{
+     rows.push([
+       r.name||'',
+       Number(r.price)||0,
+       Number(r.qty)||0,
+       (Number(r.price)||0)*(Number(r.qty)||0),
+       r.note||'',
+       ''
+     ]);
+   });
+   const sectionTotal=(s.rows||[]).reduce((a,r)=>a+(Number(r.price)||0)*(Number(r.qty)||0),0);
+   rows.push(['ИТОГО ПО РАЗДЕЛУ','','',sectionTotal,'','']);
+   rows.push([]);
+ });
+ rows.push(['ОБЩИЙ ИТОГ','','',calcTotal(e),'','']);
+
+ const ws=XLSX.utils.aoa_to_sheet(rows);
+ ws['!merges']=merges;
+ ws['!cols']=[
+   {wch:42},
+   {wch:15},
+   {wch:12},
+   {wch:17},
+   {wch:48},
+   {wch:3}
+ ];
+
+ // Money formats for numeric price/cost cells.
+ const range=XLSX.utils.decode_range(ws['!ref']);
+ for(let R=0;R<=range.e.r;R++){
+   for(const C of [1,3]){
+     const addr=XLSX.utils.encode_cell({r:R,c:C});
+     if(ws[addr] && typeof ws[addr].v==='number'){
+       ws[addr].z='#,##0.00 [$₽-419]';
+     }
+   }
+ }
+
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,'Смета');
+ XLSX.writeFile(wb,safeFileName(e.project)+'.xlsx');
+}
+
 function renderFinance(){
  const t=estimates.reduce((a,e)=>a+calcTotal(e),0),p=estimates.reduce((a,e)=>a+calcPaid(e),0),avg=estimates.length?t/estimates.length:0;
  document.getElementById('financeStats').innerHTML=`<div class="card stat"><div class="label">Оборот</div><div class="value">${rub(t)}</div></div><div class="card stat"><div class="label">Получено</div><div class="value">${rub(p)}</div></div><div class="card stat"><div class="label">К получению</div><div class="value">${rub(Math.max(t-p,0))}</div></div><div class="card stat"><div class="label">Средний чек</div><div class="value">${rub(avg)}</div></div>`;
@@ -917,8 +1071,8 @@ document.getElementById('loginPassword').addEventListener('keydown',e=>{if(e.key
 document.getElementById('logoutBtn').onclick=logout;
 document.getElementById('newEstimateBtn').onclick=startNew;
 document.getElementById('backBtn').onclick=()=>setPage('estimates');
-document.getElementById('printBtn').onclick=()=>window.print();
-document.getElementById('excelBtn').onclick=exportCSV;
+document.getElementById('printBtn').onclick=exportClientPDF;
+document.getElementById('excelBtn').onclick=exportXLSX;
 document.getElementById('saveBtn').onclick=saveEstimate;
 document.getElementById('addSectionBtn').onclick=addSection;
 document.getElementById('addPaymentBtn').onclick=openPayment;
