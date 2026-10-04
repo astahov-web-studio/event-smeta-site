@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Смета v0.3.1 — прототип v3</title>
+<title>Смета v0.3.2 — прототип v3</title>
 <style>
 :root{
   --bg:#fbf8f4;
@@ -892,10 +892,26 @@ h1{
     border-radius:8px;
     background:rgba(255,255,255,.04);
   }
+
+  /* iOS Safari: keep inputs at 16px+ so focusing does not zoom the page */
+  input,
+  select,
+  textarea,
+  .field input,
+  .field select,
+  .field textarea,
+  .cell-input,
+  .cell-text,
+  .section-title,
+  .searchbar input,
+  .searchbar select,
+  .auth-card input{
+    font-size:16px!important;
+  }
 }
 
 
-/* v0.3.1 stronger visual hierarchy */
+/* v0.3.2 stronger visual hierarchy */
 .brand-line{
   display:flex;
   align-items:center;
@@ -1159,7 +1175,7 @@ h1{
     <p>Вход в рабочий сервис</p>
     <div class="field">
       <label>Логин</label>
-      <input id="loginUsername" autocomplete="username" placeholder="admin или sasha">
+      <input id="loginUsername" autocomplete="username" placeholder="Ваш логин">
     </div>
     <div class="field">
       <label>Пароль</label>
@@ -1173,7 +1189,7 @@ h1{
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-line">Смета <span class="version-badge">v0.3.1</span></div>
+      <div class="brand-line">Смета <span class="version-badge">v0.3.2</span></div>
       <small>event workspace</small>
     </div>
     <nav class="nav">
@@ -1472,7 +1488,33 @@ function renderTotals(){const e=currentDraft,total=calcTotal(e),paid=calcPaid(e)
 function renderEstimateSummary(){const e=currentDraft,el=document.getElementById('estimateSummary');if(!e||!el)return;const total=calcTotal(e),paid=calcPaid(e),remain=Math.max(total-paid,0);el.innerHTML=`<div class="payment-row"><span>Общая стоимость</span><strong>${rub(total)}</strong></div><div class="payment-row"><span>Получено</span><strong>${rub(paid)}</strong></div><div class="payment-row"><span>Осталось получить</span><strong>${rub(remain)}</strong></div><div class="payment-row"><span>Позиций</span><strong>${itemCount(e)}</strong></div>`}
 function addSection(){currentDraft.sections.push({id:uid(),title:'Новый раздел',rows:[]});renderSections();renderTotals();renderEstimateSummary()}
 function deleteSection(si){if(!currentDraft||!currentDraft.sections[si])return;if(confirm('Удалить раздел вместе со всеми позициями?')){currentDraft.sections.splice(si,1);renderSections();renderTotals();renderEstimateSummary()}}
-function addRow(si){currentDraft.sections[si].rows.push({id:uid(),name:'',price:0,qty:1,note:''});renderSections();renderTotals();renderEstimateSummary()}
+function addRow(si){
+ currentDraft.sections[si].rows.push({id:uid(),name:'',price:0,qty:1,note:''});
+ renderSections();
+ renderTotals();
+ renderEstimateSummary();
+
+ if(window.innerWidth<=760){
+   requestAnimationFrame(()=>{
+     requestAnimationFrame(()=>{
+       const sections=document.querySelectorAll('.est-section');
+       const section=sections[si];
+       if(!section)return;
+       const rows=section.querySelectorAll('.estimate-row');
+       const newRow=rows[rows.length-1];
+       if(!newRow)return;
+       newRow.scrollIntoView({behavior:'smooth',block:'center'});
+       setTimeout(()=>{
+         const nameField=newRow.querySelector('.name');
+         if(nameField){
+           try{nameField.focus({preventScroll:true})}
+           catch(e){nameField.focus()}
+         }
+       },350);
+     });
+   });
+ }
+}
 function deleteRow(si,ri){currentDraft.sections[si].rows.splice(ri,1);renderSections();renderTotals();renderEstimateSummary()}
 function duplicateRow(si,ri){const src=currentDraft.sections[si].rows[ri];currentDraft.sections[si].rows.splice(ri+1,0,{...src,id:uid()});renderSections();renderTotals();renderEstimateSummary()}
 function renderPayments(){
